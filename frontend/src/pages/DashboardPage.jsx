@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'
 import { getLatest } from '../api/checkins'
+import { getPartner } from '../api/auth'
 import DualClock from '../components/DualClock'
 import CheckInCard from '../components/CheckInCard'
 import CheckInModal from '../components/CheckInModal'
@@ -11,14 +12,19 @@ import DailyQuestionWidget from '../components/DailyQuestionWidget'
 export default function DashboardPage() {
   const user = useAuthStore((s) => s.user)
   const [latest, setLatest] = useState({ me: null, partner: null })
+  const [partner, setPartner] = useState(null)
   const [modalOpen, setModalOpen] = useState(false)
-  const [partnerUser, setPartnerUser] = useState(null)
+
+  useEffect(() => {
+    getPartner().then((res) => setPartner(res.data)).catch(() => {})
+  }, [])
 
   const fetchLatest = async () => {
     try {
       const res = await getLatest()
       setLatest(res.data)
-      if (res.data.partner?.user) setPartnerUser(res.data.partner.user)
+      // Update partner info from check-in data if richer
+      if (res.data.partner?.user) setPartner(res.data.partner.user)
     } catch (err) {
       console.error('Failed to fetch latest check-ins', err)
     }
@@ -31,7 +37,6 @@ export default function DashboardPage() {
   }, [])
 
   const meUser = latest.me?.user || user
-  const partner = partnerUser || latest.partner?.user
 
   return (
     <div className="min-h-screen bg-surface">
