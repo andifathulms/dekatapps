@@ -9,6 +9,7 @@ from .serializers import LoveLetterSerializer, LoveLetterCreateSerializer
 
 class LoveLetterListCreateView(generics.ListCreateAPIView):
     permission_classes = [IsAuthenticated]
+    pagination_class = None
 
     def get_queryset(self):
         return LoveLetter.objects.select_related('sender').all()

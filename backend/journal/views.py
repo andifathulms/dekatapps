@@ -11,6 +11,7 @@ from .serializers import (
 
 class JournalListCreateView(generics.ListCreateAPIView):
     permission_classes = [IsAuthenticated]
+    pagination_class = None
 
     def get_queryset(self):
         return JournalEntry.objects.select_related('author').all()
@@ -52,6 +53,7 @@ class JournalDetailView(generics.RetrieveDestroyAPIView):
 
 class MemoryListCreateView(generics.ListCreateAPIView):
     permission_classes = [IsAuthenticated]
+    pagination_class = None
 
     def get_queryset(self):
         return Memory.objects.select_related('uploaded_by').all()
