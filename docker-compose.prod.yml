@@ -14,14 +14,29 @@ services:
       timeout: 5s
       retries: 5
 
+  minio:
+    image: minio/minio:latest
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
   backend:
     image: ghcr.io/andifathulms/dekatapps-backend:latest
     restart: unless-stopped
     env_file: .env
-    volumes:
-      - media_files:/app/media
     depends_on:
       db:
+        condition: service_healthy
+      minio:
         condition: service_healthy
 
   frontend:
@@ -43,7 +58,8 @@ services:
     depends_on:
       - backend
       - frontend
+      - minio
 
 volumes:
   postgres_data:
-  media_files:
+  minio_data:

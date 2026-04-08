@@ -24,6 +24,8 @@ class Memory(models.Model):
     uploaded_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='memories')
     photo = models.ImageField(upload_to='memories/')
     caption = models.CharField(max_length=200, blank=True)
+    taken_at = models.DateField(null=True, blank=True)
+    location = models.CharField(max_length=200, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

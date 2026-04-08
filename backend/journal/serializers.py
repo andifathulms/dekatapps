@@ -28,7 +28,7 @@ class MemorySerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Memory
-        fields = ['id', 'uploaded_by', 'photo', 'caption', 'created_at', 'is_mine']
+        fields = ['id', 'uploaded_by', 'photo', 'caption', 'taken_at', 'location', 'created_at', 'is_mine']
         read_only_fields = ['id', 'uploaded_by', 'created_at']
 
     def get_is_mine(self, obj):
@@ -38,4 +38,4 @@ class MemorySerializer(serializers.ModelSerializer):
 class MemoryCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Memory
-        fields = ['photo', 'caption']
+        fields = ['photo', 'caption', 'taken_at', 'location']

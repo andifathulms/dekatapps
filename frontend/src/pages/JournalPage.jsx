@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
 import { getJournal, createEntry, deleteEntry, getMemories, uploadMemory, deleteMemory } from '../api/journal'
-import { useAuthStore } from '../store/authStore'
 import { formatDistanceToNow } from 'date-fns'
 
 function JournalEntryCard({ entry, onDelete }) {
@@ -33,20 +32,113 @@ function JournalEntryCard({ entry, onDelete }) {
 }
 
 function MemoryCard({ memory, onDelete }) {
+  const [showDetail, setShowDetail] = useState(false)
   return (
-    <div className="relative aspect-square rounded-xl overflow-hidden group">
-      <img src={memory.photo} alt={memory.caption} className="w-full h-full object-cover" />
-      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-all flex flex-col justify-end p-2">
-        {memory.caption && (
-          <p className="text-white text-xs font-semibold opacity-0 group-hover:opacity-100 transition-opacity">{memory.caption}</p>
+    <>
+      <div className="relative aspect-square rounded-xl overflow-hidden group cursor-pointer"
+        onClick={() => setShowDetail(true)}>
+        <img src={memory.photo} alt={memory.caption} className="w-full h-full object-cover" />
+        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-all" />
+        {memory.is_mine && (
+          <button onClick={(e) => { e.stopPropagation(); onDelete(memory.id) }}
+            className="absolute top-1.5 right-1.5 w-6 h-6 bg-black/50 text-white rounded-full text-xs opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+            ×
+          </button>
         )}
       </div>
-      {memory.is_mine && (
-        <button onClick={() => onDelete(memory.id)}
-          className="absolute top-1.5 right-1.5 w-6 h-6 bg-black/50 text-white rounded-full text-xs opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-          ×
-        </button>
+
+      {showDetail && (
+        <div className="fixed inset-0 z-50 bg-black/80 flex flex-col items-center justify-center p-4"
+          onClick={() => setShowDetail(false)}>
+          <div className="bg-white rounded-2xl overflow-hidden w-full max-w-sm" onClick={e => e.stopPropagation()}>
+            <img src={memory.photo} alt={memory.caption} className="w-full max-h-72 object-cover" />
+            <div className="p-4 space-y-1">
+              {memory.caption && <p className="font-semibold text-gray-800 text-sm">{memory.caption}</p>}
+              {memory.location && (
+                <p className="text-xs text-gray-500">📍 {memory.location}</p>
+              )}
+              {memory.taken_at && (
+                <p className="text-xs text-gray-400">🗓 {new Date(memory.taken_at + 'T00:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
+              )}
+              <p className="text-xs text-gray-300">{formatDistanceToNow(new Date(memory.created_at), { addSuffix: true })}</p>
+            </div>
+            <button onClick={() => setShowDetail(false)}
+              className="w-full py-3 text-sm text-gray-500 border-t border-gray-100">
+              Close
+            </button>
+          </div>
+        </div>
       )}
+    </>
+  )
+}
+
+function MemoryUploadModal({ file, onClose, onSave }) {
+  const [caption, setCaption] = useState('')
+  const [location, setLocation] = useState('')
+  const [takenAt, setTakenAt] = useState('')
+  const [saving, setSaving] = useState(false)
+  const preview = file ? URL.createObjectURL(file) : null
+
+  const handleSave = async () => {
+    setSaving(true)
+    try {
+      const fd = new FormData()
+      fd.append('photo', file)
+      fd.append('caption', caption)
+      fd.append('location', location)
+      if (takenAt) fd.append('taken_at', takenAt)
+      await onSave(fd)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black/60 flex items-end sm:items-center justify-center">
+      <div className="bg-white rounded-t-3xl sm:rounded-2xl w-full max-w-sm">
+        {preview && (
+          <img src={preview} alt="" className="w-full max-h-52 object-cover rounded-t-3xl sm:rounded-t-2xl" />
+        )}
+        <div className="p-4 space-y-3">
+          <p className="font-bold text-gray-800">Add memory details</p>
+          <input
+            type="text"
+            value={caption}
+            onChange={e => setCaption(e.target.value)}
+            placeholder="Caption (optional)"
+            maxLength={200}
+            className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+          />
+          <input
+            type="text"
+            value={location}
+            onChange={e => setLocation(e.target.value)}
+            placeholder="📍 Where was this taken? (optional)"
+            maxLength={200}
+            className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+          />
+          <div>
+            <label className="text-xs text-gray-400 mb-1 block">🗓 Date taken (optional)</label>
+            <input
+              type="date"
+              value={takenAt}
+              onChange={e => setTakenAt(e.target.value)}
+              className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+            />
+          </div>
+          <div className="flex gap-2 pt-1">
+            <button onClick={handleSave} disabled={saving}
+              className="flex-1 bg-primary text-white py-2.5 rounded-xl text-sm font-semibold disabled:opacity-60">
+              {saving ? 'Uploading...' : 'Save Memory'}
+            </button>
+            <button onClick={onClose}
+              className="flex-1 bg-gray-100 text-gray-600 py-2.5 rounded-xl text-sm font-semibold">
+              Cancel
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   )
 }
@@ -60,6 +152,7 @@ export default function JournalPage() {
   const [body, setBody] = useState('')
   const [photo, setPhoto] = useState(null)
   const [saving, setSaving] = useState(false)
+  const [pendingFile, setPendingFile] = useState(null)
   const photoRef = useRef()
   const memoryRef = useRef()
 
@@ -88,16 +181,17 @@ export default function JournalPage() {
     setEntries((prev) => prev.filter((e) => e.id !== id))
   }
 
-  const handleUploadMemory = async (e) => {
+  const handleFileSelected = (e) => {
     const file = e.target.files[0]
-    if (!file) return
-    const caption = window.prompt('Add a caption (optional):') || ''
-    const fd = new FormData()
-    fd.append('photo', file)
-    fd.append('caption', caption)
+    if (file) setPendingFile(file)
+    e.target.value = ''
+  }
+
+  const handleSaveMemory = async (fd) => {
     try {
       const res = await uploadMemory(fd)
       setMemories((prev) => [res.data, ...prev])
+      setPendingFile(null)
     } catch (err) { console.error(err) }
   }
 
@@ -137,7 +231,7 @@ export default function JournalPage() {
           ))}
         </div>
 
-        <input ref={memoryRef} type="file" accept="image/*" className="hidden" onChange={handleUploadMemory} />
+        <input ref={memoryRef} type="file" accept="image/*" className="hidden" onChange={handleFileSelected} />
 
         {tab === 'journal' && (
           <div className="space-y-3">
@@ -185,6 +279,14 @@ export default function JournalPage() {
           </div>
         )}
       </div>
+
+      {pendingFile && (
+        <MemoryUploadModal
+          file={pendingFile}
+          onClose={() => setPendingFile(null)}
+          onSave={handleSaveMemory}
+        />
+      )}
     </div>
   )
 }

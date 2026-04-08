@@ -11,4 +11,4 @@ COPY . .
 
 RUN mkdir -p media staticfiles
 
-CMD ["sh", "-c", "python manage.py migrate && python manage.py seed_users && python manage.py collectstatic --noinput && gunicorn dekat.wsgi:application --bind 0.0.0.0:8000"]
+CMD ["sh", "-c", "python manage.py migrate && python manage.py seed_users && python manage.py setup_minio && python manage.py collectstatic --noinput && gunicorn dekat.wsgi:application --bind 0.0.0.0:8000"]
