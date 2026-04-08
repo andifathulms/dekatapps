@@ -6,3 +6,4 @@ export const sendLetter = (data) =>
     headers: data instanceof FormData ? { 'Content-Type': 'multipart/form-data' } : {},
   })
 export const markLetterRead = (id) => client.post(`/api/letters/${id}/read/`)
+export const getUnreadCount = () => client.get('/api/letters/unread/')

@@ -6,6 +6,7 @@ import HistoryPage from './pages/HistoryPage'
 import LettersPage from './pages/LettersPage'
 import JournalPage from './pages/JournalPage'
 import ProfilePage from './pages/ProfilePage'
+import QuestionsPage from './pages/QuestionsPage'
 import NavBar from './components/NavBar'
 import { useEffect } from 'react'
 import { getMe } from './api/auth'
@@ -41,6 +42,7 @@ export default function App() {
         <Route path="/history" element={<ProtectedRoute><AppLayout><HistoryPage /></AppLayout></ProtectedRoute>} />
         <Route path="/letters" element={<ProtectedRoute><AppLayout><LettersPage /></AppLayout></ProtectedRoute>} />
         <Route path="/journal" element={<ProtectedRoute><AppLayout><JournalPage /></AppLayout></ProtectedRoute>} />
+        <Route path="/questions" element={<ProtectedRoute><AppLayout><QuestionsPage /></AppLayout></ProtectedRoute>} />
         <Route path="/profile" element={<ProtectedRoute><AppLayout><ProfilePage /></AppLayout></ProtectedRoute>} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

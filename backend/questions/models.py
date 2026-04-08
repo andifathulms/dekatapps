@@ -42,6 +42,7 @@ class DailyQuestion(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     date = models.DateField(unique=True)
     text = models.TextField()
+    is_custom = models.BooleanField(default=False)
 
     class Meta:
         ordering = ['-date']

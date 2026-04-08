@@ -15,10 +15,11 @@ class DailyQuestionSerializer(serializers.ModelSerializer):
     my_answer = serializers.SerializerMethodField()
     partner_answer = serializers.SerializerMethodField()
     both_answered = serializers.SerializerMethodField()
+    can_change = serializers.SerializerMethodField()
 
     class Meta:
         model = DailyQuestion
-        fields = ['id', 'date', 'text', 'my_answer', 'partner_answer', 'both_answered']
+        fields = ['id', 'date', 'text', 'is_custom', 'my_answer', 'partner_answer', 'both_answered', 'can_change']
 
     def get_my_answer(self, obj):
         user = self.context['request'].user
@@ -34,7 +35,6 @@ class DailyQuestionSerializer(serializers.ModelSerializer):
         partner = User.objects.exclude(id=user.id).first()
         if not partner:
             return None
-        # Only reveal partner's answer if current user has answered
         my_answer = obj.answers.filter(user=user).first()
         if not my_answer:
             return None
@@ -45,3 +45,6 @@ class DailyQuestionSerializer(serializers.ModelSerializer):
 
     def get_both_answered(self, obj):
         return obj.answers.count() >= 2
+
+    def get_can_change(self, obj):
+        return not obj.answers.exists()

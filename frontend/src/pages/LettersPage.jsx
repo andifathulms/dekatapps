@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { getLetters, sendLetter, markLetterRead } from '../api/letters'
 import { useAuthStore } from '../store/authStore'
+import { useUnreadStore } from '../store/unreadStore'
 import { formatDistanceToNow } from 'date-fns'
 
 function LetterCard({ letter, onRead }) {
@@ -35,12 +36,15 @@ function LetterCard({ letter, onRead }) {
 
 export default function LettersPage() {
   const user = useAuthStore((s) => s.user)
+  const { clear: clearUnread } = useUnreadStore()
   const [letters, setLetters] = useState([])
   const [composing, setComposing] = useState(false)
   const [body, setBody] = useState('')
   const [photo, setPhoto] = useState(null)
   const [sending, setSending] = useState(false)
   const fileRef = useRef()
+
+  useEffect(() => { clearUnread() }, [])
 
   const load = async () => {
     try {

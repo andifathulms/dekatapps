@@ -19,6 +19,9 @@ class LoveLetterListCreateView(generics.ListCreateAPIView):
             return LoveLetterCreateSerializer
         return LoveLetterSerializer
 
+    def get_serializer_context(self):
+        return {'request': self.request}
+
     def perform_create(self, serializer):
         serializer.save(sender=self.request.user)
 
@@ -38,8 +41,15 @@ class MarkLetterReadView(APIView):
             letter = LoveLetter.objects.get(pk=pk)
         except LoveLetter.DoesNotExist:
             return Response(status=404)
-        # Only the recipient (not sender) marks it read
         if letter.sender != request.user and not letter.read_at:
             letter.read_at = timezone.now()
             letter.save()
         return Response(LoveLetterSerializer(letter, context={'request': request}).data)
+
+
+class UnreadCountView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        count = LoveLetter.objects.exclude(sender=request.user).filter(read_at__isnull=True).count()
+        return Response({'count': count})
