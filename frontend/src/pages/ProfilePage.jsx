@@ -136,9 +136,17 @@ export default function ProfilePage() {
             <p className="text-xl font-bold text-gray-800">{user?.display_name}</p>
             <p className="text-sm text-gray-400">@{user?.username}</p>
           </div>
-          <div className="bg-surface rounded-xl px-4 py-2 text-sm text-gray-500 flex items-center gap-2">
-            <span>🕐</span>
-            <span>{user?.timezone}</span>
+          <div className="flex gap-2 flex-wrap justify-center">
+            {user?.city && (
+              <div className="bg-surface rounded-xl px-3 py-1.5 text-sm text-gray-500 flex items-center gap-1.5">
+                <span>📍</span>
+                <span>{user.city}</span>
+              </div>
+            )}
+            <div className="bg-surface rounded-xl px-3 py-1.5 text-sm text-gray-500 flex items-center gap-1.5">
+              <span>🕐</span>
+              <span>{user?.timezone}</span>
+            </div>
           </div>
         </div>
 

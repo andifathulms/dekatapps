@@ -23,6 +23,8 @@ class MeView(APIView):
             user.display_name = request.data['display_name']
         if 'timezone' in request.data:
             user.timezone = request.data['timezone']
+        if 'city' in request.data:
+            user.city = request.data['city']
         user.save()
         return Response(UserSerializer(user).data)
 

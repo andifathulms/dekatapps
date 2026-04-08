@@ -8,6 +8,7 @@ class User(AbstractUser):
     display_name = models.CharField(max_length=100)
     avatar = models.ImageField(upload_to='avatars/', null=True, blank=True)
     timezone = models.CharField(max_length=50, default='Asia/Jakarta')
+    city = models.CharField(max_length=100, blank=True)
 
     def __str__(self):
         return self.display_name or self.username

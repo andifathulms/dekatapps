@@ -20,10 +20,11 @@ function ClockCard({ user, color }) {
   const tz = user.timezone || 'UTC'
   const time = formatInTimeZone(now, tz, 'HH:mm:ss')
   const date = formatInTimeZone(now, tz, 'EEE, d MMM')
-  const tzShort = tz.split('/').pop().replace(/_/g, ' ')
+  // Show city if set, otherwise fall back to last part of timezone
+  const cityLabel = user.city || tz.split('/').pop().replace(/_/g, ' ')
 
   return (
-    <div className={`flex-1 bg-white rounded-2xl p-4 border border-gray-100 text-center`}>
+    <div className="flex-1 bg-white rounded-2xl p-4 border border-gray-100 text-center">
       <div
         className="w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-bold mx-auto mb-2"
         style={{ backgroundColor: color }}
@@ -33,7 +34,7 @@ function ClockCard({ user, color }) {
       <p className="text-xs font-semibold text-gray-500 mb-1">{user.display_name}</p>
       <p className="text-2xl font-mono font-bold text-gray-800">{time}</p>
       <p className="text-xs text-gray-400 mt-1">{date}</p>
-      <p className="text-xs text-gray-300 mt-0.5">{tzShort}</p>
+      <p className="text-xs text-gray-300 mt-0.5">{cityLabel}</p>
     </div>
   )
 }

@@ -3,8 +3,54 @@ import { reverseGeocode, createCheckIn } from '../api/checkins'
 
 const MOODS = ['😊', '😴', '🍜', '💪', '☕', '🏠', '💼', '😔', '🥰', '😤']
 
+// Prompt user to paste coordinates from Google Maps
+function ManualCoords({ onConfirm }) {
+  const [input, setInput] = useState('')
+  const [error, setError] = useState('')
+
+  const parse = () => {
+    // Accept "lat, lon" or "lat,lon" format as copied from Google Maps
+    const match = input.trim().match(/^(-?\d+\.?\d*)[,\s]+(-?\d+\.?\d*)$/)
+    if (!match) {
+      setError('Enter coordinates as: -6.200000, 106.816666')
+      return
+    }
+    const lat = parseFloat(match[1])
+    const lon = parseFloat(match[2])
+    if (lat < -90 || lat > 90 || lon < -180 || lon > 180) {
+      setError('Invalid coordinates range.')
+      return
+    }
+    onConfirm(lat, lon)
+  }
+
+  return (
+    <div className="space-y-3">
+      <p className="text-sm text-gray-600 leading-relaxed">
+        Open <strong>Google Maps</strong>, long-press your location, then copy the coordinates shown at the top.
+      </p>
+      <input
+        type="text"
+        value={input}
+        onChange={(e) => { setInput(e.target.value); setError('') }}
+        placeholder="-6.200000, 106.816666"
+        className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-primary"
+        autoFocus
+      />
+      {error && <p className="text-xs text-red-500">{error}</p>}
+      <button
+        onClick={parse}
+        disabled={!input.trim()}
+        className="w-full bg-primary text-white py-2.5 rounded-xl text-sm font-semibold disabled:opacity-60"
+      >
+        Use These Coordinates
+      </button>
+    </div>
+  )
+}
+
 export default function CheckInModal({ isOpen, onClose, onSuccess }) {
-  const [step, setStep] = useState('locating')
+  const [step, setStep] = useState('locating') // locating | manual | confirm | error
   const [coords, setCoords] = useState(null)
   const [placeData, setPlaceData] = useState(null)
   const [placeName, setPlaceName] = useState('')
@@ -12,27 +58,47 @@ export default function CheckInModal({ isOpen, onClose, onSuccess }) {
   const [moodEmoji, setMoodEmoji] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [geoBlocked, setGeoBlocked] = useState(false)
+
+  const geocodeAndConfirm = async (lat, lon) => {
+    setStep('locating')
+    try {
+      const res = await reverseGeocode(lat, lon)
+      setPlaceData(res.data)
+      setPlaceName(res.data.place_name)
+      setCoords({ latitude: lat, longitude: lon })
+      setStep('confirm')
+    } catch {
+      setError('Could not look up place name. You can enter it manually.')
+      setCoords({ latitude: lat, longitude: lon })
+      setPlaceName('')
+      setStep('confirm')
+    }
+  }
 
   const locate = () => {
     setStep('locating')
     setError('')
+    setGeoBlocked(false)
+
+    if (!navigator.geolocation) {
+      setGeoBlocked(true)
+      setStep('manual')
+      return
+    }
+
     navigator.geolocation.getCurrentPosition(
-      async (position) => {
+      (position) => {
         const { latitude, longitude } = position.coords
-        setCoords({ latitude, longitude })
-        try {
-          const res = await reverseGeocode(latitude, longitude)
-          setPlaceData(res.data)
-          setPlaceName(res.data.place_name)
-          setStep('confirm')
-        } catch {
-          setError('Could not determine your location name. Please try again.')
-          setStep('error')
-        }
+        geocodeAndConfirm(
+          parseFloat(latitude.toFixed(6)),
+          parseFloat(longitude.toFixed(6))
+        )
       },
       (err) => {
-        setError('Could not get your location. Please allow location access.')
-        setStep('error')
+        // PERMISSION_DENIED (1) or HTTPS required → show manual fallback
+        setGeoBlocked(true)
+        setStep('manual')
       },
       { timeout: 10000 }
     )
@@ -47,6 +113,7 @@ export default function CheckInModal({ isOpen, onClose, onSuccess }) {
       setNote('')
       setMoodEmoji('')
       setError('')
+      setGeoBlocked(false)
       locate()
     }
   }, [isOpen])
@@ -56,9 +123,9 @@ export default function CheckInModal({ isOpen, onClose, onSuccess }) {
     setLoading(true)
     try {
       await createCheckIn({
-        latitude: parseFloat(coords.latitude.toFixed(6)),
-        longitude: parseFloat(coords.longitude.toFixed(6)),
-        place_name: placeName,
+        latitude: coords.latitude,
+        longitude: coords.longitude,
+        place_name: placeName || 'Unknown place',
         place_type: placeData?.place_type || 'place',
         note,
         mood_emoji: moodEmoji,
@@ -80,7 +147,7 @@ export default function CheckInModal({ isOpen, onClose, onSuccess }) {
       <div className="relative bg-white w-full max-w-lg rounded-t-3xl md:rounded-2xl shadow-xl p-6 space-y-4 max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between mb-2">
           <h2 className="text-lg font-bold text-gray-800">Check In</h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-xl leading-none">&times;</button>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-xl leading-none">×</button>
         </div>
 
         {step === 'locating' && (
@@ -90,15 +157,12 @@ export default function CheckInModal({ isOpen, onClose, onSuccess }) {
           </div>
         )}
 
-        {step === 'error' && (
-          <div className="text-center py-8">
-            <p className="text-red-500 text-sm mb-4">{error}</p>
-            <button
-              onClick={locate}
-              className="bg-primary text-white px-6 py-2 rounded-xl text-sm font-semibold"
-            >
-              Retry
-            </button>
+        {step === 'manual' && (
+          <div className="space-y-4">
+            <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-sm text-amber-700">
+              📍 Location access requires HTTPS. Enter your coordinates manually.
+            </div>
+            <ManualCoords onConfirm={(lat, lon) => geocodeAndConfirm(lat, lon)} />
           </div>
         )}
 
@@ -115,6 +179,11 @@ export default function CheckInModal({ isOpen, onClose, onSuccess }) {
               />
               {placeData?.display_address && (
                 <p className="text-xs text-gray-400 mt-1 truncate">{placeData.display_address}</p>
+              )}
+              {coords && (
+                <p className="text-xs text-gray-300 mt-0.5">
+                  {coords.latitude}, {coords.longitude}
+                </p>
               )}
             </div>
 
@@ -157,6 +226,13 @@ export default function CheckInModal({ isOpen, onClose, onSuccess }) {
             >
               {loading ? 'Saving...' : '📍 Check In'}
             </button>
+
+            {/* Allow switching to manual if auto-locate worked but user wants different coords */}
+            {!geoBlocked && (
+              <button onClick={() => setStep('manual')} className="w-full text-xs text-gray-400 hover:text-primary transition-colors">
+                Enter coordinates manually instead
+              </button>
+            )}
           </div>
         )}
       </div>
