@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useAuthStore } from '../store/authStore'
 import { useNavigate, Link } from 'react-router-dom'
 import { getTodayMood, logMood } from '../api/mood'
-import { updateMe } from '../api/auth'
+import { updateMe, searchCity } from '../api/auth'
 import MoodCalendar from '../components/MoodCalendar'
 
 const MOOD_OPTIONS = [
@@ -81,6 +81,89 @@ function MoodTracker() {
   )
 }
 
+function LocationEditor({ user, onSaved }) {
+  const [query, setQuery] = useState('')
+  const [results, setResults] = useState([])
+  const [searching, setSearching] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const debounceRef = useRef(null)
+
+  const handleQueryChange = (e) => {
+    const val = e.target.value
+    setQuery(val)
+    clearTimeout(debounceRef.current)
+    if (!val.trim()) { setResults([]); return }
+    debounceRef.current = setTimeout(async () => {
+      setSearching(true)
+      try {
+        const hits = await searchCity(val)
+        setResults(hits)
+      } catch (e) {
+        setResults([])
+      } finally {
+        setSearching(false)
+      }
+    }, 400)
+  }
+
+  const handleSelect = async (result) => {
+    setSaving(true)
+    setResults([])
+    setQuery('')
+    try {
+      const res = await updateMe({
+        city: result.name + (result.country ? `, ${result.country}` : ''),
+        timezone: result.timezone,
+        latitude: result.latitude,
+        longitude: result.longitude,
+      })
+      onSaved(res.data)
+    } catch (e) {
+      console.error(e)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div className="space-y-2">
+      <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Change Location</p>
+      <div className="relative">
+        <input
+          type="text"
+          value={query}
+          onChange={handleQueryChange}
+          placeholder="Search city (e.g. Jakarta, London…)"
+          className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+        />
+        {searching && (
+          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400">searching…</span>
+        )}
+        {saving && (
+          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400">saving…</span>
+        )}
+      </div>
+      {results.length > 0 && (
+        <ul className="bg-white border border-gray-100 rounded-xl shadow-md divide-y divide-gray-50 overflow-hidden">
+          {results.map((r) => (
+            <li key={r.id}>
+              <button
+                onClick={() => handleSelect(r)}
+                className="w-full text-left px-4 py-3 hover:bg-primary/5 transition-colors"
+              >
+                <span className="text-sm font-semibold text-gray-800">{r.name}</span>
+                {r.admin1 && <span className="text-xs text-gray-400 ml-1">{r.admin1}</span>}
+                <span className="text-xs text-gray-400 ml-1">· {r.country}</span>
+                <span className="block text-xs text-gray-300 mt-0.5">{r.timezone}</span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  )
+}
+
 export default function ProfilePage() {
   const { user, setUser, logout } = useAuthStore()
   const navigate = useNavigate()
@@ -109,6 +192,10 @@ export default function ProfilePage() {
   }
 
   const initial = (user?.display_name || user?.username || '?')[0].toUpperCase()
+
+  const handleLocationSaved = (updated) => {
+    setUser(updated)
+  }
 
   return (
     <div className="min-h-screen bg-surface">
@@ -147,6 +234,9 @@ export default function ProfilePage() {
               <span>🕐</span>
               <span>{user?.timezone}</span>
             </div>
+          </div>
+          <div className="w-full mt-2">
+            <LocationEditor user={user} onSaved={handleLocationSaved} />
           </div>
         </div>
 

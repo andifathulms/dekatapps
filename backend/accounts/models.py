@@ -9,6 +9,8 @@ class User(AbstractUser):
     avatar = models.ImageField(upload_to='avatars/', null=True, blank=True)
     timezone = models.CharField(max_length=50, default='Asia/Jakarta')
     city = models.CharField(max_length=100, blank=True)
+    latitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
+    longitude = models.DecimalField(max_digits=10, decimal_places=6, null=True, blank=True)
 
     def __str__(self):
         return self.display_name or self.username

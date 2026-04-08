@@ -13,3 +13,12 @@ export const updateMe = (data) =>
 
 export const getPartner = () =>
   client.get('/api/auth/partner/')
+
+// Search cities using Open-Meteo geocoding (free, no API key)
+export const searchCity = async (query) => {
+  const res = await fetch(
+    `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(query)}&count=8&language=en&format=json`
+  )
+  const data = await res.json()
+  return data.results || []
+}

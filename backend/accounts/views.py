@@ -25,6 +25,10 @@ class MeView(APIView):
             user.timezone = request.data['timezone']
         if 'city' in request.data:
             user.city = request.data['city']
+        if 'latitude' in request.data:
+            user.latitude = request.data['latitude'] or None
+        if 'longitude' in request.data:
+            user.longitude = request.data['longitude'] or None
         user.save()
         return Response(UserSerializer(user).data)
 
