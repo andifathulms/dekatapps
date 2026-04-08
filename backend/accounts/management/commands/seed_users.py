@@ -14,14 +14,14 @@ class Command(BaseCommand):
             username='fathul',
             display_name='Fathul',
             timezone='Asia/Makassar',
-            password='changeme123',
+            password='fathul123',
             email='fathul@dekat.app'
         )
         User.objects.create_user(
-            username='sayang',
-            display_name='Sayang',
-            timezone='Asia/Makassar',
-            password='changeme123',
-            email='sayang@dekat.app'
+            username='hania',
+            display_name='Hania',
+            timezone='Asia/Jakarta',
+            password='hania123',
+            email='hania@dekat.app'
         )
-        self.stdout.write(self.style.SUCCESS('Users created: fathul / sayang'))
+        self.stdout.write(self.style.SUCCESS('Users created: fathul / hania'))
