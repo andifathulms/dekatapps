@@ -14,7 +14,9 @@ class Command(BaseCommand):
             username='fathul',
             display_name='Fathul',
             timezone='Asia/Makassar',
-            city='Nusantara',
+            city='Nusantara, Indonesia',
+            latitude=-0.873330,
+            longitude=117.000580,
             password='fathul123',
             email='fathul@dekat.app'
         )
@@ -22,7 +24,9 @@ class Command(BaseCommand):
             username='hania',
             display_name='Hania',
             timezone='Asia/Jakarta',
-            city='Solo',
+            city='Solo, Indonesia',
+            latitude=-7.575960,
+            longitude=110.824700,
             password='hania123',
             email='hania@dekat.app'
         )
