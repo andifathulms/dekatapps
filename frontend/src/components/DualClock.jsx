@@ -287,6 +287,17 @@ function ClockCard({ user, accentColor }) {
     return () => clearInterval(iv)
   }, [])
 
+  // Derive everything needed for animType before useMemo — using safe defaults when user is null
+  const tz      = user?.timezone || 'UTC'
+  const hour    = user ? parseInt(formatInTimeZone(now, tz, 'H')) : 12
+  const theme   = getTimeTheme(hour)
+  const isNight = theme.period === 'night' || theme.period === 'dusk'
+  const meta    = weather ? weatherMeta(weather.code, isNight) : null
+  const animType  = meta?.anim ?? (isNight ? 'stars' : 'sunny')
+
+  // useMemo must be called unconditionally — before any early return
+  const particles = useMemo(() => genParticles(animType), [animType]) // eslint-disable-line
+
   if (!user) {
     return (
       <div className="flex-1 rounded-2xl p-5 bg-gray-50 border border-gray-100 flex items-center justify-center min-h-[220px]">
@@ -295,23 +306,14 @@ function ClockCard({ user, accentColor }) {
     )
   }
 
-  const tz       = user.timezone || 'UTC'
-  const hour     = parseInt(formatInTimeZone(now, tz, 'H'))
-  const time     = formatInTimeZone(now, tz, 'HH:mm:ss')
-  const dateStr  = formatInTimeZone(now, tz, 'EEE, d MMM')
-  const city     = user.city || tz.split('/').pop().replace(/_/g, ' ')
-  const theme    = getTimeTheme(hour)
-  const isNight  = theme.period === 'night' || theme.period === 'dusk'
-  const moon     = getMoonPhase(now)
+  const time    = formatInTimeZone(now, tz, 'HH:mm:ss')
+  const dateStr = formatInTimeZone(now, tz, 'EEE, d MMM')
+  const city    = user.city || tz.split('/').pop().replace(/_/g, ' ')
+  const moon    = getMoonPhase(now)
 
-  const meta     = weather ? weatherMeta(weather.code, isNight) : null
-  const uvBadge  = weather ? uvInfo(weather.uv) : null
-  const aqBadge  = weather ? aqiInfo(weather.aqi) : null
-  const sunProg  = weather ? getSunProgress(weather.sunrise, weather.sunset, now, tz) : null
-
-  // Animation type — weather takes priority, else time-based default
-  const animType = meta?.anim ?? (isNight ? 'stars' : 'sunny')
-  const particles = useMemo(() => genParticles(animType), [animType]) // eslint-disable-line
+  const uvBadge = weather ? uvInfo(weather.uv)   : null
+  const aqBadge = weather ? aqiInfo(weather.aqi) : null
+  const sunProg = weather ? getSunProgress(weather.sunrise, weather.sunset, now, tz) : null
 
   // Text palette
   const T  = theme.light ? 'text-white'        : 'text-slate-800'
