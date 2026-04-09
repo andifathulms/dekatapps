@@ -3,68 +3,59 @@ import { getCheckIns } from '../api/checkins'
 import { useAuthStore } from '../store/authStore'
 import CheckInCard from '../components/CheckInCard'
 import HistoryMap from '../components/HistoryMap'
-import { format, isToday, isYesterday } from 'date-fns'
+import { format, subDays, addDays, isToday, isYesterday, parseISO } from 'date-fns'
 
-function groupByDate(checkins) {
-  const groups = {}
-  checkins.forEach((c) => {
-    const date = new Date(c.checked_in_at)
-    let label
-    if (isToday(date)) label = 'Today'
-    else if (isYesterday(date)) label = 'Yesterday'
-    else label = format(date, 'EEEE, d MMM')
-    if (!groups[label]) groups[label] = []
-    groups[label].push(c)
-  })
-  return groups
+function toDateStr(d) {
+  return format(d, 'yyyy-MM-dd')
+}
+
+function dayLabel(d) {
+  if (isToday(d))     return 'Today'
+  if (isYesterday(d)) return 'Yesterday'
+  return format(d, 'EEEE, d MMM yyyy')
 }
 
 export default function HistoryPage() {
   const user = useAuthStore((s) => s.user)
-  const [tab, setTab] = useState('timeline')
+  const [tab, setTab]       = useState('timeline')
   const [filter, setFilter] = useState('all')
+  const [date, setDate]     = useState(new Date())
   const [checkins, setCheckins] = useState([])
-  const [hasMore, setHasMore] = useState(false)
-  const [page, setPage] = useState(1)
-  const [loading, setLoading] = useState(false)
+  const [loading, setLoading]   = useState(false)
 
-  const fetchCheckins = async (pageNum = 1, append = false) => {
+  const isMe = (c) => c.user?.username === user?.username
+
+  const fetch = async (d, f) => {
     setLoading(true)
     try {
-      const params = { page: pageNum }
-      if (filter !== 'all') params.user = filter
-      const res = await getCheckIns(params)
+      const params = { date: toDateStr(d) }
+      if (f !== 'all') params.user = f
+      // Fetch all for this day (no pagination — days are naturally bounded)
+      const res = await getCheckIns({ ...params, page_size: 200 })
+      // API may return paginated or plain array
       const data = res.data
-      setCheckins(append ? (prev) => [...prev, ...data.results] : data.results)
-      setHasMore(!!data.next)
-    } catch (err) {
-      console.error('Failed to fetch check-ins', err)
+      setCheckins(Array.isArray(data) ? data : data.results ?? [])
+    } catch (e) {
+      console.error(e)
     } finally {
       setLoading(false)
     }
   }
 
   useEffect(() => {
-    if (tab === 'timeline') {
-      setPage(1)
-      fetchCheckins(1, false)
-    }
-  }, [filter, tab])
+    if (tab === 'timeline') fetch(date, filter)
+  }, [date, filter, tab])
 
-  const handleLoadMore = () => {
-    const next = page + 1
-    setPage(next)
-    fetchCheckins(next, true)
-  }
-
-  const grouped = groupByDate(checkins)
-  const isMe = (checkin) => checkin.user?.username === user?.username
+  const goBack    = () => setDate(d => subDays(d, 1))
+  const goForward = () => { if (!isToday(date)) setDate(d => addDays(d, 1)) }
 
   return (
     <div className="min-h-screen bg-surface">
       <div className="max-w-lg mx-auto">
         <div className="px-4 pt-6 pb-2">
           <h1 className="text-xl font-bold text-gray-800 mb-4">History</h1>
+
+          {/* Tab switcher */}
           <div className="flex gap-2 mb-4">
             {['timeline', 'map'].map((t) => (
               <button key={t} onClick={() => setTab(t)}
@@ -78,8 +69,32 @@ export default function HistoryPage() {
         </div>
 
         {tab === 'timeline' && (
-          <div className="px-4">
-            <div className="flex gap-2 mb-4">
+          <div className="px-4 space-y-4 pb-6">
+            {/* Day navigator */}
+            <div className="flex items-center justify-between bg-white rounded-2xl border border-gray-100 px-3 py-2.5">
+              <button
+                onClick={goBack}
+                className="w-9 h-9 flex items-center justify-center rounded-xl hover:bg-gray-50 text-gray-500 text-lg transition-colors"
+              >
+                ‹
+              </button>
+              <div className="text-center">
+                <p className="text-sm font-bold text-gray-800">{dayLabel(date)}</p>
+                {!isToday(date) && (
+                  <p className="text-xs text-gray-400">{format(date, 'd MMM yyyy')}</p>
+                )}
+              </div>
+              <button
+                onClick={goForward}
+                disabled={isToday(date)}
+                className="w-9 h-9 flex items-center justify-center rounded-xl hover:bg-gray-50 text-gray-500 text-lg transition-colors disabled:opacity-25"
+              >
+                ›
+              </button>
+            </div>
+
+            {/* Filter pills */}
+            <div className="flex gap-2">
               {['all', 'me', 'partner'].map((f) => (
                 <button key={f} onClick={() => setFilter(f)}
                   className={`px-3 py-1.5 rounded-full text-xs font-semibold capitalize transition-colors ${
@@ -90,27 +105,27 @@ export default function HistoryPage() {
               ))}
             </div>
 
-            <div className="space-y-6 pb-4">
-              {Object.entries(grouped).map(([date, items]) => (
-                <div key={date}>
-                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">{date}</p>
-                  <div className="space-y-3">
-                    {items.map((c) => <CheckInCard key={c.id} checkin={c} isMe={isMe(c)} />)}
-                  </div>
-                </div>
-              ))}
-
-              {checkins.length === 0 && !loading && (
-                <div className="text-center text-gray-400 py-12">No check-ins yet.</div>
-              )}
-
-              {hasMore && (
-                <button onClick={handleLoadMore} disabled={loading}
-                  className="w-full py-2.5 border border-gray-200 rounded-xl text-sm text-gray-500 hover:bg-gray-50 transition-colors disabled:opacity-50">
-                  {loading ? 'Loading...' : 'Load more'}
+            {/* Check-in list */}
+            {loading ? (
+              <div className="flex justify-center py-12">
+                <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+              </div>
+            ) : checkins.length === 0 ? (
+              <div className="text-center text-gray-400 py-12">
+                <p className="text-3xl mb-2">📭</p>
+                <p className="text-sm">No check-ins on {dayLabel(date).toLowerCase()}</p>
+                <button onClick={goBack} className="mt-3 text-xs text-primary font-semibold">
+                  ← Go to previous day
                 </button>
-              )}
-            </div>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {checkins.map((c) => <CheckInCard key={c.id} checkin={c} isMe={isMe(c)} />)}
+                <p className="text-center text-xs text-gray-300 pt-2">
+                  {checkins.length} check-in{checkins.length !== 1 ? 's' : ''} on {dayLabel(date).toLowerCase()}
+                </p>
+              </div>
+            )}
           </div>
         )}
 

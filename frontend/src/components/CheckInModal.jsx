@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { reverseGeocode, createCheckIn } from '../api/checkins'
+import MiniMap from './MiniMap'
 
 const MOODS = ['😊', '😴', '🍜', '💪', '☕', '🏠', '💼', '😔', '🥰', '😤']
 
@@ -167,7 +168,13 @@ export default function CheckInModal({ isOpen, onClose, onSuccess }) {
         )}
 
         {step === 'confirm' && (
-          <div className="space-y-4">
+          <div className="space-y-3">
+            {/* Map preview */}
+            {coords && (
+              <MiniMap latitude={coords.latitude} longitude={coords.longitude} place_name={placeName} />
+            )}
+
+            {/* Place */}
             <div>
               <label className="block text-xs font-semibold text-gray-500 mb-1">Place</label>
               <input
@@ -181,25 +188,11 @@ export default function CheckInModal({ isOpen, onClose, onSuccess }) {
                 <p className="text-xs text-gray-400 mt-1 truncate">{placeData.display_address}</p>
               )}
               {coords && (
-                <p className="text-xs text-gray-300 mt-0.5">
-                  {coords.latitude}, {coords.longitude}
-                </p>
+                <p className="text-xs text-gray-300 mt-0.5">{coords.latitude}, {coords.longitude}</p>
               )}
             </div>
 
-            <div>
-              <label className="block text-xs font-semibold text-gray-500 mb-1">
-                Note <span className="font-normal text-gray-400">({note.length}/200)</span>
-              </label>
-              <textarea
-                value={note}
-                onChange={(e) => setNote(e.target.value.slice(0, 200))}
-                className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary resize-none"
-                rows={3}
-                placeholder="What are you up to? (optional)"
-              />
-            </div>
-
+            {/* Mood — above note so it's always visible without scrolling */}
             <div>
               <label className="block text-xs font-semibold text-gray-500 mb-2">Mood</label>
               <div className="flex flex-wrap gap-2">
@@ -208,13 +201,27 @@ export default function CheckInModal({ isOpen, onClose, onSuccess }) {
                     key={emoji}
                     onClick={() => setMoodEmoji(moodEmoji === emoji ? '' : emoji)}
                     className={`text-2xl p-1.5 rounded-xl transition-all ${
-                      moodEmoji === emoji ? 'bg-primary/10 ring-2 ring-primary' : 'hover:bg-gray-100'
+                      moodEmoji === emoji ? 'bg-primary/10 ring-2 ring-primary scale-110' : 'hover:bg-gray-100'
                     }`}
                   >
                     {emoji}
                   </button>
                 ))}
               </div>
+            </div>
+
+            {/* Note */}
+            <div>
+              <label className="block text-xs font-semibold text-gray-500 mb-1">
+                Note <span className="font-normal text-gray-400">({note.length}/200)</span>
+              </label>
+              <textarea
+                value={note}
+                onChange={(e) => setNote(e.target.value.slice(0, 200))}
+                className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary resize-none"
+                rows={2}
+                placeholder="What are you up to? (optional)"
+              />
             </div>
 
             {error && <p className="text-red-500 text-sm">{error}</p>}
@@ -227,7 +234,6 @@ export default function CheckInModal({ isOpen, onClose, onSuccess }) {
               {loading ? 'Saving...' : '📍 Check In'}
             </button>
 
-            {/* Allow switching to manual if auto-locate worked but user wants different coords */}
             {!geoBlocked && (
               <button onClick={() => setStep('manual')} className="w-full text-xs text-gray-400 hover:text-primary transition-colors">
                 Enter coordinates manually instead
